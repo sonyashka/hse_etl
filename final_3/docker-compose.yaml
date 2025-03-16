@@ -18,10 +18,20 @@ services:
       - MONGO_INITDB_DATABASE=source
       - MONGO_INITDB_ROOT_USERNAME=mongouser
       - MONGO_INITDB_ROOT_PASSWORD=mongopasswd
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
     ports:
       - '27017:27017'
     volumes:
       - mongodata:/data/db
+
+  mongo-generator:
+    build: ./generator
+    container_name: mongo-generator
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command: ["python", "gen.py"]
 
   airflow-init:
     image: apache/airflow:2.6.2

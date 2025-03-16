@@ -1,10 +1,20 @@
 import random
+from datetime import timedelta
 from faker import Faker
+from pymongo import MongoClient, errors
+
 
 faker = Faker()
 
 USERS_COUNT = 1000
 PRODUCTS_COUNT = 3000
+USER_SESSIONS_COUNT = 5000
+PRODUCT_PRICE_HISTORY_COUNT = 3000
+EVENT_LOGS_COUNT = 2000
+SUPPORT_TICKETS_COUNT = 300
+USER_RECOMMENDATIONS_COUNT = 1000
+MODERATION_QUEUE_COUNT = 500
+SEARCH_QUERIES_COUNT = 5000
 
 users = [i for i in range(USERS_COUNT)]
 products = [i for i in range(PRODUCTS_COUNT)]
@@ -57,10 +67,10 @@ def support_tickets_gen(cnt):
 
 def user_recommendations_gen(cnt):
     return [{
-        "user_id": random.choice(users),
+        "user_id": i,
         "recommended_products": [random.choice(products) for _ in range(random.randint(1, 10))],
         "last_updated": fake.date_time_this_year().isoformat()
-    } for _ in range(cnt)]
+    } for i in range(cnt)]
 
 def moderation_queue_gen(cnt):
     status = ["published", "in_work", "blocked"]
@@ -84,3 +94,27 @@ def search_queries_gen(cnt):
         "filters": [faker.word() for _ in range(random.randint(0, 5))],
         "resulst_count": random.randint(0, PRODUCTS_COUNT)
     } for i in range(cnt)]
+
+
+try:
+    client = MongoClient("mongodb://mongouser:mongopasswd@mongo:27017", serverSelectionTimeoutMS=5000)
+    db = client["source"]
+except errors.ServerSelectionTimeoutError:
+    exit(1)
+
+tables = [
+    {"table": "user_sessions", "gen": user_sessions_gen, "count": USER_SESSIONS_COUNT},
+    {"table": "product_price_history", "gen": product_price_history_gen, "count": PRODUCT_PRICE_HISTORY_COUNT},
+    {"table": "event_logs", "gen": event_logs_gen, "count": EVENT_LOGS_COUNT},
+    {"table": "support_tickets", "gen": support_tickets_gen, "count": SUPPORT_TICKETS_COUNT},
+    {"table": "user_recommendations", "gen": user_recommendations_gen, "count": USER_RECOMMENDATIONS_COUNT},
+    {"table": "moderation_queue", "gen": moderation_queue_gen, "count": MODERATION_QUEUE_COUNT},
+    {"table": "search_queries", "gen": search_queries_gen, "count": SEARCH_QUERIES_COUNT}
+]
+
+for table in tables:
+    try:
+        gen_data = table.gen(table.count)
+        db[table.table].insert_many(gen_data)
+    except Exception as e:
+        exit(1)
