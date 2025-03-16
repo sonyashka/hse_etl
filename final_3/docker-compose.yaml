@@ -37,11 +37,35 @@ services:
     image: apache/airflow:2.6.2
     container_name: airflow-init
     build: ./airflow
+    env_file:
+      - .env
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-    command: bash -c "airflow db init && airflow db upgrade && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin"
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+    command: bash -c "airflow db init && airflow db upgrade &&
+       airflow users create \
+       --username admin \
+       --firstname Admin \
+       --lastname User \
+       --role Admin \
+       --email admin@example.com \
+       --password admin && 
+       aifrlow connections add 'mongo' \
+       --conn-type 'mongo' \
+       --conn-host 'mongo' \
+       --conn-schema 'source' \
+       --conn-login 'mongouser' \
+       --conn-password 'mongopasswd' \
+       --conn-port '27017' 
+       --conn-extra '${MONGO_EXTRA_CONN}' &&
+       airflow connections add 'postgres' \
+       --conn-type 'postgres' \
+       --conn-host 'postgres' \
+       --conn-schema 'target' \
+       --conn-login 'airflow' \
+       --conn-password 'airflow' \
+       --conn-port '5432'"
 
   airflow-webserver:
     image: apache/airflow:2.6.2
@@ -54,9 +78,9 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
     command: webserver
 
   airflow-scheduler:
@@ -68,9 +92,9 @@ services:
       airflow-init:
         condition: service_completed_successfully
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
     command: scheduler
 
 volumes:
