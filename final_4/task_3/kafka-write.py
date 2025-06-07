@@ -28,10 +28,7 @@ def main():
         StructField("care_options", StringType(), True)])
 
    df = spark.read.csv('s3a://ms-hw1/2025/06/05/mental_health.csv', schema=schema)
-#    df = spark.createDataFrame([
-#       Row(msg="Test message #1 from dataproc-cluster"),
-#       Row(msg="Test message #2 from dataproc-cluster")
-#    ])
+   
    df = df.select(to_json(struct([col(c).alias(c) for c in df.columns])).alias('value'))
    df.write.format("kafka") \
       .option("kafka.bootstrap.servers", "rc1a-b90khsqmvlbkas2h.mdb.yandexcloud.net:9091") \
